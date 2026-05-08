@@ -1,690 +1,226 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Link Ripper — Ekstrak & Fetch Semua Link dari File</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <style>
-        :root {
-            --bg: #06090a;
-            --bg2: #0c1214;
-            --card: #101a1e;
-            --card2: #14222a;
-            --border: #1c3240;
-            --border2: #284558;
-            --fg: #e4f0f5;
-            --fg2: #b8d0dc;
-            --muted: #5e8a9e;
-            --accent: #00d4aa;
-            --accent2: #00a884;
-            --accent-dim: rgba(0,212,170,0.08);
-            --success: #2dd4a0;
-            --warn: #f0b429;
-            --danger: #f06060;
-            --info: #4dabf7;
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: 'Space Grotesk', sans-serif;
-            background: var(--bg);
-            color: var(--fg);
-            min-height: 100vh;
-        }
-        .mono { font-family: 'JetBrains Mono', monospace; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Auto Redirect</title>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --fg: #e8e8f0;
+    --accent: #00ffa3;
+    --muted: #5a5a7a;
+    --card: #12121c;
+    --border: #1e1e30;
+  }
 
-        .bg-atmos {
-            position: fixed; inset: 0; z-index: 0; pointer-events: none;
-            background:
-                radial-gradient(ellipse 60% 40% at 10% 0%, rgba(0,212,170,0.06) 0%, transparent 60%),
-                radial-gradient(ellipse 50% 50% at 90% 100%, rgba(0,168,132,0.04) 0%, transparent 60%);
-        }
-        .bg-grid {
-            position: fixed; inset: 0; z-index: 0; pointer-events: none;
-            background-image:
-                linear-gradient(rgba(28,50,64,0.2) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(28,50,64,0.2) 1px, transparent 1px);
-            background-size: 44px 44px;
-            mask-image: radial-gradient(ellipse 60% 50% at 50% 30%, black 10%, transparent 70%);
-        }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
 
-        .dropzone {
-            border: 2px dashed var(--border);
-            border-radius: 20px;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            position: relative;
-            overflow: hidden;
-        }
-        .dropzone::before {
-            content: '';
-            position: absolute; inset: -2px;
-            border-radius: 22px;
-            background: conic-gradient(from 0deg, transparent 0%, var(--accent) 10%, transparent 20%);
-            opacity: 0;
-            transition: opacity 0.4s;
-            z-index: -1;
-            animation: spin 4s linear infinite;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .dropzone:hover::before, .dropzone.dragover::before { opacity: 0.5; }
-        .dropzone:hover, .dropzone.dragover {
-            border-color: var(--accent2);
-            background: var(--accent-dim);
-        }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'Segoe UI', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
 
-        .url-item {
-            background: var(--bg2);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 16px 20px;
-            transition: all 0.3s ease;
-        }
-        .url-item:hover {
-            border-color: var(--border2);
-            transform: translateX(4px);
-        }
+  /* Background animasi gerak */
+  .bg-blob {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(120px);
+    opacity: 0.25;
+    animation: float 6s ease-in-out infinite alternate;
+    pointer-events: none;
+  }
+  .bg-blob.one {
+    width: 500px; height: 500px;
+    background: var(--accent);
+    top: -150px; left: -100px;
+  }
+  .bg-blob.two {
+    width: 400px; height: 400px;
+    background: #ff3366;
+    bottom: -120px; right: -80px;
+    animation-delay: -3s;
+  }
 
-        .result-box {
-            background: #080e11;
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 20px;
-            max-height: 400px;
-            overflow-y: auto;
-            font-size: 13px;
-            line-height: 1.8;
-            color: var(--fg2);
-            white-space: pre-wrap;
-            word-break: break-word;
-        }
-        .result-box::-webkit-scrollbar { width: 6px; }
-        .result-box::-webkit-scrollbar-track { background: transparent; }
-        .result-box::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+  @keyframes float {
+    0% { transform: translate(0, 0) scale(1); }
+    100% { transform: translate(40px, 30px) scale(1.15); }
+  }
 
-        .btn {
-            padding: 10px 22px;
-            border-radius: 10px;
-            font-family: 'Space Grotesk', sans-serif;
-            font-weight: 600;
-            font-size: 14px;
-            cursor: pointer;
-            border: 1px solid transparent;
-            transition: all 0.25s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .btn-primary {
-            background: var(--accent);
-            color: #06090a;
-            border-color: var(--accent);
-        }
-        .btn-primary:hover { background: var(--accent2); box-shadow: 0 0 30px rgba(0,212,170,0.2); }
-        .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
-        .btn-ghost {
-            background: transparent;
-            color: var(--muted);
-            border-color: var(--border);
-        }
-        .btn-ghost:hover { border-color: var(--border2); color: var(--fg2); }
+  .container {
+    text-align: center;
+    position: relative;
+    z-index: 2;
+  }
 
-        .status-dot {
-            width: 8px; height: 8px;
-            border-radius: 50%;
-            display: inline-block;
-            flex-shrink: 0;
-        }
-        .status-wait { background: var(--muted); }
-        .status-loading { background: var(--warn); animation: pulse 1s infinite; }
-        .status-done { background: var(--success); }
-        .status-error { background: var(--danger); }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.4; transform: scale(0.7); }
-        }
+  /* Spinner */
+  .spinner-ring {
+    width: 80px; height: 80px;
+    margin: 0 auto 32px;
+    border-radius: 50%;
+    border: 4px solid var(--border);
+    border-top-color: var(--accent);
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
 
-        .toast {
-            position: fixed;
-            bottom: 30px; right: 30px;
-            background: var(--card2);
-            border: 1px solid var(--border2);
-            border-radius: 12px;
-            padding: 14px 22px;
-            font-size: 14px;
-            color: var(--fg);
-            z-index: 9999;
-            transform: translateY(100px);
-            opacity: 0;
-            transition: all 0.35s ease;
-            display: flex; align-items: center; gap: 10px;
-        }
-        .toast.show { transform: translateY(0); opacity: 1; }
+  h1 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    letter-spacing: -0.5px;
+  }
+  .sub {
+    color: var(--muted);
+    font-size: 0.95rem;
+    margin-bottom: 28px;
+  }
 
-        .fade-in { animation: fadeIn 0.5s ease forwards; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+  /* Progress bar */
+  .progress-wrap {
+    width: 280px;
+    height: 6px;
+    background: var(--border);
+    border-radius: 99px;
+    margin: 0 auto 16px;
+    overflow: hidden;
+  }
+  .progress-bar {
+    height: 100%;
+    width: 0%;
+    background: var(--accent);
+    border-radius: 99px;
+    transition: width 0.3s ease;
+  }
 
-        .section-label {
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            color: var(--muted);
-        }
+  .countdown {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-bottom: 24px;
+  }
+  .countdown span {
+    color: var(--accent);
+    font-weight: 700;
+  }
 
-        .copy-btn {
-            position: absolute;
-            top: 10px; right: 10px;
-            background: var(--card);
-            border: 1px solid var(--border);
-            color: var(--muted);
-            padding: 5px 12px;
-            border-radius: 8px;
-            font-size: 11px;
-            font-family: 'Space Grotesk', sans-serif;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .copy-btn:hover { background: var(--accent-dim); color: var(--accent); border-color: var(--accent2); }
-    </style>
+  /* Link manual fallback */
+  .manual-link {
+    display: inline-block;
+    padding: 12px 28px;
+    background: transparent;
+    border: 1.5px solid var(--accent);
+    color: var(--accent);
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.25s ease;
+    opacity: 0;
+    animation: fadeIn 0.5s ease 2.5s forwards;
+  }
+  .manual-link:hover {
+    background: var(--accent);
+    color: var(--bg);
+  }
+
+  @keyframes fadeIn {
+    to { opacity: 1; }
+  }
+
+  /* Toast notif */
+  .toast {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--fg);
+    padding: 12px 24px;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    opacity: 0;
+    transition: all 0.4s ease;
+    pointer-events: none;
+    z-index: 99;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+</style>
 </head>
 <body>
 
-<div class="bg-atmos"></div>
-<div class="bg-grid"></div>
+<!-- Background blob -->
+<div class="bg-blob one"></div>
+<div class="bg-blob two"></div>
 
-<div style="position:relative;z-index:1;max-width:900px;margin:0 auto;padding:40px 20px 80px;">
+<div class="container">
+  <div class="spinner-ring"></div>
+  <h1>Membuka Link...</h1>
+  <p class="sub">Tunggu sebentar, kamu akan dialihkan otomatis</p>
+  <div class="progress-wrap"><div class="progress-bar" id="progressBar"></div></div>
+  <p class="countdown">Redirect dalam <span id="timer">3</span> detik</p>
 
-    <!-- Header -->
-    <header style="margin-bottom:48px;" class="fade-in">
-        <div class="section-label" style="margin-bottom:12px;">System Tool</div>
-        <h1 style="font-size:clamp(32px,5vw,48px);font-weight:800;letter-spacing:-1.5px;line-height:1.1;">
-            Link <span style="color:var(--accent);">Ripper</span>
-        </h1>
-        <p style="color:var(--muted);font-size:16px;margin-top:12px;max-width:560px;line-height:1.7;">
-            Upload file apa saja. Sistem ekstrak semua URL, fetch isi halaman, hasilnya bisa langsung kamu copy ke Gemini.
-        </p>
-    </header>
-
-    <!-- Dropzone -->
-    <div id="dropzone" class="dropzone" style="padding:60px 40px;text-align:center;margin-bottom:40px;">
-        <input type="file" id="fileInput" accept=".txt,.pdf,.html,.htm,.md,.csv,.json,.xml,.log,.doc,.docx,.png,.jpg,.jpeg,.gif,.bmp,.webp" style="display:none;">
-        <div style="margin-bottom:16px;">
-            <i class="fas fa-file-import" style="font-size:36px;color:var(--accent);opacity:0.7;"></i>
-        </div>
-        <div style="font-size:18px;font-weight:600;margin-bottom:8px;">Drop file di sini</div>
-        <div style="font-size:13px;color:var(--muted);">atau klik untuk pilih file</div>
-        <div style="font-size:11px;color:var(--border2);margin-top:14px;" class="mono">
-            txt, pdf, html, md, csv, json, xml, log, png, jpg, webp
-        </div>
-    </div>
-
-    <!-- File info -->
-    <div id="fileInfo" style="display:none;margin-bottom:32px;" class="fade-in">
-        <div style="display:flex;align-items:center;gap:14px;padding:16px 20px;background:var(--card);border:1px solid var(--border);border-radius:12px;">
-            <i id="fileIcon" class="fas fa-file" style="font-size:20px;color:var(--accent);"></i>
-            <div style="flex:1;min-width:0;">
-                <div id="fileName" style="font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
-                <div id="fileSize" style="font-size:12px;color:var(--muted);margin-top:2px;" class="mono"></div>
-            </div>
-            <button id="clearBtn" class="btn btn-ghost" style="padding:6px 14px;font-size:12px;">
-                <i class="fas fa-xmark"></i> Hapus
-            </button>
-        </div>
-    </div>
-
-    <!-- Extracted URLs -->
-    <div id="urlsSection" style="display:none;margin-bottom:40px;" class="fade-in">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
-            <div>
-                <div class="section-label" style="margin-bottom:4px;">URL Ditemukan</div>
-                <div id="urlCount" style="font-size:22px;font-weight:700;"></div>
-            </div>
-            <button id="fetchAllBtn" class="btn btn-primary">
-                <i class="fas fa-bolt"></i> Fetch Semua
-            </button>
-        </div>
-        <div id="urlList" style="display:flex;flex-direction:column;gap:10px;"></div>
-    </div>
-
-    <!-- Results -->
-    <div id="resultsSection" style="display:none;" class="fade-in">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
-            <div>
-                <div class="section-label" style="margin-bottom:4px;">Hasil Fetch</div>
-                <div id="resultCount" style="font-size:22px;font-weight:700;"></div>
-            </div>
-            <div style="display:flex;gap:10px;">
-                <button id="copyAllBtn" class="btn btn-ghost">
-                    <i class="fas fa-copy"></i> Copy Semua
-                </button>
-            </div>
-        </div>
-        <div id="resultList" style="display:flex;flex-direction:column;gap:20px;"></div>
-    </div>
-
+  <!-- ============================================== -->
+  <!--  GANTI HREF DI BAWAH DENGAN LINK KAMU          -->
+  <!-- ============================================== -->
+  <a class="manual-link" id="targetLink" href="https://www.google.com">Klik manual jika tidak otomatis</a>
 </div>
 
-<!-- Toast -->
-<div id="toast" class="toast"></div>
+<div class="toast" id="toast"></div>
 
 <script>
-// ============================================
-// KONFIGURASI SISTEM
-// ============================================
-const CONFIG = {
-    // CORS proxy — browser tidak bisa fetch URL sembarangan,
-    // jadi kita pakai proxy publik sebagai jembatan.
-    // Kalau satu proxy mati, sistem otomatis coba yang lain.
-    proxies: [
-        url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-        url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-        url => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
-    ],
-    maxContentSize: 80000,  // batas karakter per halaman
-    timeout: 20000,         // 20 detik per request
-    maxUrls: 30,            // maks URL yang diproses
-};
+  // =============================================
+  // GANTI LINK DI BAWAH INI DENGAN LINK KAMU
+  // =============================================
+  const TARGET_URL = 'https://bit.ly/
+  49C33rJ?[data]';
 
-// ============================================
-// STATE SISTEM
-// ============================================
-let state = {
-    fileText: '',       // teks hasil ekstraksi dari file
-    urls: [],           // daftar URL unik
-    results: new Map(), // url → { status, content, error }
-    fetching: false,
-};
+  // Set href link manual juga
+  document.getElementById('targetLink').href = TARGET_URL;
 
-// ============================================
-// SETUP PDF.js
-// ============================================
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  // Set link di address bar (tanpa klik dulu)
+  const TOTAL_SECONDS = 3;
+  let remaining = TOTAL_SECONDS;
+  const timerEl = document.getElementById('timer');
+  const progressBar = document.getElementById('progressBar');
+  const toast = document.getElementById('toast');
 
-// ============================================
-// DOM REFERENCES
-// ============================================
-const $ = id => document.getElementById(id);
-const dropzone = $('dropzone');
-const fileInput = $('fileInput');
-const fileInfo = $('fileInfo');
-const urlsSection = $('urlsSection');
-const resultsSection = $('resultsSection');
-
-// ============================================
-// FILE INPUT HANDLING
-// ============================================
-dropzone.addEventListener('click', () => fileInput.click());
-dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dragover'); });
-dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
-dropzone.addEventListener('drop', e => {
-    e.preventDefault();
-    dropzone.classList.remove('dragover');
-    if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
-});
-fileInput.addEventListener('change', () => {
-    if (fileInput.files.length) handleFile(fileInput.files[0]);
-});
- $('clearBtn').addEventListener('click', resetAll);
-
-// ============================================
-// CORE: EKSTRAK TEKS DARI FILE
-// ============================================
-async function handleFile(file) {
-    resetState();
-    showFileInfo(file);
-
-    try {
-        const ext = file.name.split('.').pop().toLowerCase();
-
-        if (ext === 'pdf') {
-            // PDF → extract teks per halaman via PDF.js
-            const buffer = await file.arrayBuffer();
-            const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
-            let text = '';
-            for (let i = 1; i <= pdf.numPages; i++) {
-                const page = await pdf.getPage(i);
-                const content = await page.getTextContent();
-                text += content.items.map(item => item.str).join(' ') + '\n\n';
-            }
-            state.fileText = text;
-
-        } else if (['png','jpg','jpeg','gif','bmp','webp'].includes(ext)) {
-            // Gambar → OCR via Tesseract.js (CDN)
-            showToast('Memproses gambar (OCR)...', 'warn');
-            if (typeof Tesseract === 'undefined') {
-                await loadScript('https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js');
-            }
-            const result = await Tesseract.recognize(file, 'eng+ind');
-            state.fileText = result.data.text;
-
-        } else {
-            // Teks-based: txt, html, md, csv, json, xml, log, dll.
-            state.fileText = await file.text();
-        }
-
-        extractUrls();
-    } catch (err) {
-        showToast('Gagal baca file: ' + err.message, 'error');
-    }
-}
-
-// ============================================
-// CORE: EKSTRAK URL DARI TEKS
-// ============================================
-function extractUrls() {
-    // Regex komprehensif untuk URL
-    const urlRegex = /https?:\/\/[^\s<>"')\]}]+/gi;
-    const raw = state.fileText.match(urlRegex) || [];
-
-    // Bersihkan: hapus trailing punctuation
-    const cleaned = raw.map(u => u.replace(/[.,;:!?\)\]\}>]+$/, ''));
-
-    // Unik + urut
-    state.urls = [...new Set(cleaned)].slice(0, CONFIG.maxUrls);
-
-    if (!state.urls.length) {
-        showToast('Tidak ada URL ditemukan di file ini.', 'error');
-        return;
-    }
-
-    renderUrlList();
-    showToast(`${state.urls.length} URL ditemukan`, 'success');
-}
-
-// ============================================
-// CORE: FETCH HALAMAN WEB (melalui CORS proxy)
-// ============================================
-async function fetchUrl(url) {
-    // Coba semua proxy secara berurutan
-    for (let i = 0; i < CONFIG.proxies.length; i++) {
-        const proxyUrl = CONFIG.proxies[i](url);
-        try {
-            const controller = new AbortController();
-            const timer = setTimeout(() => controller.abort(), CONFIG.timeout);
-
-            const res = await fetch(proxyUrl, {
-                signal: controller.signal,
-                headers: { 'Accept': 'text/html,text/plain,application/json,*/*' }
-            });
-            clearTimeout(timer);
-
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-            let text = await res.text();
-
-            // Strip HTML → teks bersih
-            text = htmlToText(text);
-
-            // Batas ukuran
-            if (text.length > CONFIG.maxContentSize) {
-                text = text.slice(0, CONFIG.maxContentSize) + '\n\n[...dipotong, terlalu panjang...]';
-            }
-
-            return { status: 'done', content: text };
-        } catch (e) {
-            // Kalau proxy terakhir juga gagal, return error
-            if (i === CONFIG.proxies.length - 1) {
-                return { status: 'error', error: e.message };
-            }
-            // Coba proxy berikutnya
-            continue;
-        }
-    }
-    return { status: 'error', error: 'Semua proxy gagal' };
-}
-
-// ============================================
-// HTML → TEKS BERSIH (parser sederhana)
-// ============================================
-function htmlToText(html) {
-    // Buang script & style
-    let text = html.replace(/<script[\s\S]*?<\/script>/gi, '');
-    text = text.replace(/<style[\s\S]*?<\/style>/gi, '');
-    // Blok elements → newline
-    text = text.replace(/<\/?(p|div|br|h[1-6]|li|tr|blockquote|hr)[^>]*>/gi, '\n');
-    // Sisa tags → hapus
-    text = text.replace(/<[^>]+>/g, '');
-    // Decode entities dasar
-    text = text.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-               .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ');
-    // Bersihkan whitespace berlebih
-    text = text.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
-    return text;
-}
-
-// ============================================
-// FETCH SEMUA URL
-// ============================================
- $('fetchAllBtn').addEventListener('click', fetchAll);
-
-async function fetchAll() {
-    if (state.fetching) return;
-    state.fetching = true;
-    state.results.clear();
-    $('fetchAllBtn').disabled = true;
-    $('fetchAllBtn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mengambil...';
-
-    resultsSection.style.display = 'block';
-
-    // Fetch paralel (max 5 concurrent)
-    const concurrency = 5;
-    for (let i = 0; i < state.urls.length; i += concurrency) {
-        const batch = state.urls.slice(i, i + concurrency);
-        const promises = batch.map(async (url) => {
-            updateUrlStatus(url, 'loading');
-            const result = await fetchUrl(url);
-            state.results.set(url, result);
-            updateUrlStatus(url, result.status);
-            renderResult(url, result);
-        });
-        await Promise.all(promises);
-    }
-
-    state.fetching = false;
-    $('fetchAllBtn').disabled = false;
-    $('fetchAllBtn').innerHTML = '<i class="fas fa-bolt"></i> Fetch Semua';
-
-    const done = [...state.results.values()].filter(r => r.status === 'done').length;
-    const err = [...state.results.values()].filter(r => r.status === 'error').length;
-    $('resultCount').textContent = `${done} berhasil, ${err} gagal`;
-    showToast(`Selesai: ${done} berhasil, ${err} gagal`, done > 0 ? 'success' : 'error');
-}
-
-// ============================================
-// RENDER: DAFTAR URL
-// ============================================
-function renderUrlList() {
-    urlsSection.style.display = 'block';
-    $('urlCount').textContent = state.urls.length + ' link';
-
-    const container = $('urlList');
-    container.innerHTML = '';
-
-    state.urls.forEach((url, idx) => {
-        const item = document.createElement('div');
-        item.className = 'url-item';
-        item.id = `url-item-${idx}`;
-        item.innerHTML = `
-            <div style="display:flex;align-items:center;gap:12px;">
-                <span class="status-dot status-wait" id="dot-${idx}"></span>
-                <div style="flex:1;min-width:0;">
-                    <div class="mono" style="font-size:13px;color:var(--fg2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${url}">
-                        ${escapeHtml(url)}
-                    </div>
-                    <div style="font-size:11px;color:var(--muted);margin-top:3px;" id="status-${idx}">Menunggu...</div>
-                </div>
-                <a href="${escapeHtml(url)}" target="_blank" rel="noopener" style="color:var(--muted);font-size:14px;transition:color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">
-                    <i class="fas fa-external-link-alt"></i>
-                </a>
-            </div>
-        `;
-        container.appendChild(item);
-    });
-}
-
-// ============================================
-// RENDER: HASIL PER URL
-// ============================================
-function renderResult(url, result) {
-    const container = $('resultList');
-    // Cek apakah sudah ada
-    let box = document.getElementById(`result-${hashUrl(url)}`);
-    if (!box) {
-        box = document.createElement('div');
-        box.id = `result-${hashUrl(url)}`;
-        box.style.position = 'relative';
-        container.appendChild(box);
-    }
-
-    if (result.status === 'error') {
-        box.innerHTML = `
-            <div class="section-label" style="margin-bottom:8px;color:var(--danger);">GAGAL</div>
-            <div class="mono" style="font-size:12px;color:var(--muted);margin-bottom:8px;word-break:break-all;">${escapeHtml(url)}</div>
-            <div style="font-size:13px;color:var(--danger);">${escapeHtml(result.error)}</div>
-        `;
-        box.style.cssText = 'position:relative;background:rgba(240,96,96,0.05);border:1px solid rgba(240,96,96,0.15);border-radius:12px;padding:20px;';
-    } else {
-        box.innerHTML = `
-            <button class="copy-btn" onclick="copyText(this)" data-text="${encodeURIComponent(result.content)}">
-                <i class="fas fa-copy"></i> Copy
-            </button>
-            <div class="section-label" style="margin-bottom:8px;">BERHASIL — ${result.content.length.toLocaleString()} karakter</div>
-            <div class="mono" style="font-size:12px;color:var(--muted);margin-bottom:12px;word-break:break-all;">${escapeHtml(url)}</div>
-            <div class="result-box">${escapeHtml(result.content)}</div>
-        `;
-        box.style.cssText = 'position:relative;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;';
-    }
-
-    $('resultCount').textContent = container.children.length + ' halaman';
-}
-
-// ============================================
-// UPDATE STATUS DOT
-// ============================================
-function updateUrlStatus(url, status) {
-    const idx = state.urls.indexOf(url);
-    if (idx === -1) return;
-    const dot = $(`dot-${idx}`);
-    const label = $(`status-${idx}`);
-    if (!dot || !label) return;
-
-    dot.className = 'status-dot';
-    if (status === 'loading') {
-        dot.classList.add('status-loading');
-        label.textContent = 'Mengambil...';
-    } else if (status === 'done') {
-        dot.classList.add('status-done');
-        label.textContent = 'Berhasil';
-        label.style.color = 'var(--success)';
-    } else {
-        dot.classList.add('status-error');
-        label.textContent = 'Gagal';
-        label.style.color = 'var(--danger)';
-    }
-}
-
-// ============================================
-// COPY SEMUA HASIL
-// ============================================
- $('copyAllBtn').addEventListener('click', () => {
-    let combined = '';
-    state.results.forEach((result, url) => {
-        combined += `===== ${url} =====\n`;
-        if (result.status === 'done') {
-            combined += result.content + '\n\n';
-        } else {
-            combined += `[ERROR] ${result.error}\n\n`;
-        }
-    });
-    navigator.clipboard.writeText(combined).then(() => {
-        showToast('Semua hasil di-copy ke clipboard', 'success');
-    });
-});
-
-function copyText(btn) {
-    const text = decodeURIComponent(btn.dataset.text);
-    navigator.clipboard.writeText(text).then(() => {
-        btn.innerHTML = '<i class="fas fa-check"></i> Copied';
-        setTimeout(() => { btn.innerHTML = '<i class="fas fa-copy"></i> Copy'; }, 1500);
-    });
-}
-
-// ============================================
-// UTILITAS SISTEM
-// ============================================
-function resetState() {
-    state.fileText = '';
-    state.urls = [];
-    state.results.clear();
-    state.fetching = false;
-    urlsSection.style.display = 'none';
-    resultsSection.style.display = 'none';
-    $('urlList').innerHTML = '';
-    $('resultList').innerHTML = '';
-}
-
-function resetAll() {
-    resetState();
-    fileInfo.style.display = 'none';
-    fileInput.value = '';
-}
-
-function showFileInfo(file) {
-    fileInfo.style.display = 'block';
-    $('fileName').textContent = file.name;
-    const size = file.size < 1024 ? file.size + ' B'
-               : file.size < 1048576 ? (file.size / 1024).toFixed(1) + ' KB'
-               : (file.size / 1048576).toFixed(1) + ' MB';
-    $('fileSize').textContent = size + ' • ' + (file.type || 'unknown');
-
-    const ext = file.name.split('.').pop().toLowerCase();
-    const iconMap = {
-        pdf: 'fa-file-pdf', png: 'fa-file-image', jpg: 'fa-file-image',
-        jpeg: 'fa-file-image', gif: 'fa-file-image', webp: 'fa-file-image',
-        html: 'fa-file-code', htm: 'fa-file-code', json: 'fa-file-code',
-        xml: 'fa-file-code', md: 'fa-file-lines', txt: 'fa-file-lines',
-        csv: 'fa-file-csv', log: 'fa-file-lines',
-    };
-    $('fileIcon').className = 'fas ' + (iconMap[ext] || 'fa-file');
-}
-
-function hashUrl(url) {
-    let h = 0;
-    for (let i = 0; i < url.length; i++) { h = ((h << 5) - h + url.charCodeAt(i)) | 0; }
-    return 'h' + Math.abs(h);
-}
-
-function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-}
-
-function showToast(msg, type = 'info') {
-    const toast = $('toast');
-    const colors = { success: 'var(--success)', error: 'var(--danger)', warn: 'var(--warn)', info: 'var(--info)' };
-    const icons = { success: 'fa-check-circle', error: 'fa-times-circle', warn: 'fa-exclamation-triangle', info: 'fa-info-circle' };
-    toast.innerHTML = `<i class="fas ${icons[type]}" style="color:${colors[type]};font-size:16px;"></i> ${msg}`;
+  // Tampilkan toast
+  function showToast(msg) {
+    toast.textContent = msg;
     toast.classList.add('show');
-    clearTimeout(toast._timer);
-    toast._timer = setTimeout(() => toast.classList.remove('show'), 3500);
-}
+    setTimeout(() => toast.classList.remove('show'), 2500);
+  }
 
-function loadScript(src) {
-    return new Promise((resolve, reject) => {
-        const s = document.createElement('script');
-        s.src = src;
-        s.onload = resolve;
-        s.onerror = reject;
-        document.head.appendChild(s);
-    });
-}
+  // Countdown + progress
+  const interval = setInterval(() => {
+    remaining--;
+    timerEl.textContent = remaining;
+    const pct = ((TOTAL_SECONDS - remaining) / TOTAL_SECONDS) * 100;
+    progressBar.style.width = pct + '%';
+
+    if (remaining <= 0) {
+      clearInterval(interval);
+      progressBar.style.width = '100%';
+      showToast('Membuka link sekarang...');
+
+      // Auto klik link setelah countdown selesai
+      setTimeout(() => {
+        window.location.href = TARGET_URL;
+      }, 400);
+    }
+  }, 1000);
 </script>
-
 </body>
-             </html>
+</html>
